@@ -205,7 +205,114 @@ class Management:
 
     '''Функція появи кнопок редагування та видалення контактів при виборі будь-якого контакту'''
     def Selected(self, a):
-        pass
+        self.update_bt = Button(self.frame_2, text='Редагувати контакт', font=(cs.font_1, 12), bd=2, command=self.UpdateData,cursor="hand2", bg=cs.color_6,fg=self.color_3).place(x=30,y=225,width=140,height=40)
+        self.delete_bt = Button(self.frame_2, text='Видалити контакт', font=(cs.font_1, 12), bd=2, command=self.DeleteData,cursor="hand2", bg=cs.color_5,fg=self.color_3).place(x=30,y=285,width=140,height=40)
+
+    '''Функція редагування вибраного контакту'''
+    def UpdateData(self):
+        x = self.tree.selection()
+        y=self.tree.item(x)['values']
+        if y=="":
+            messagebox.showerror('Помилка!', "Виберіть, будь ласка, контакт!")
+        else:
+            try:
+                connection = pymysql.connect(host=self.host, user=self.user, password=self.password, database=self.database)
+                curs = connection.cursor()
+                curs.execute("select * from contact_register where contact=%s", y[3])
+                row=curs.fetchone()
+                self.GetData_to_Update(row)
+                connection.close()
+            except Exception as e:
+                messagebox.showerror("Error!",f"Error due to {str(e)}",parent=self.window)
+
+    '''Функція отримання даних від користувача для оновлення редагованого контакту'''
+    def GetData_to_Update(self, row):
+        self.ClearScreen()
+
+        self.name = Label(self.frame_1, text="Ім'я", font=(self.font_2, 15, "bold"), bg=self.color_1).place(x=220,y=30)
+        self.name_entry = Entry(self.frame_1, bg=self.color_4, fg=self.color_3)
+        self.name_entry.insert(0, row[0])
+        self.name_entry.place(x=220,y=60, width=300)
+
+        self.surname = Label(self.frame_1, text="Прізвище", font=(self.font_2, 15, "bold"), bg=self.color_1).place(x=220,y=100)
+        self.surname_entry = Entry(self.frame_1, bg=self.color_4, fg=self.color_3)
+        self.surname_entry.insert(0, row[1])
+        self.surname_entry.place(x=220,y=130, width=300)
+
+        self.addr = Label(self.frame_1, text="Адрес", font=(self.font_2, 15, "bold"), bg=self.color_1).place(x=220,y=170)
+        self.addr_entry = Entry(self.frame_1, bg=self.color_4, fg=self.color_3)
+        self.addr_entry.insert(0, row[2])
+        self.addr_entry.place(x=220,y=200, width=300)
+
+        contact = Label(self.frame_1, text="Номер телефону", font=(self.font_2, 15, "bold"), bg=self.color_1).place(x=220,y=240)
+        contact_data = Label(self.frame_1, text=row[3], font=(self.font_1, 10)).place(x=220, y=270)
+        
+        self.email = Label(self.frame_1, text="Email", font=(self.font_2, 15, "bold"), bg=self.color_1).place(x=220,y=310)
+        self.email_entry = Entry(self.frame_1, bg=self.color_4, fg=self.color_3)
+        self.email_entry.insert(0, row[4])
+        self.email_entry.place(x=220,y=340, width=300)
+
+        self.submit_bt_1 = Button(self.frame_1, text='Зберегти', font=(self.font_1, 12), bd=2, command=partial(self.UpdateRecord, row), cursor="hand2", bg=self.color_2,fg=self.color_3).place(x=310,y=389,width=100)
+        self.cancel_bt = Button(self.frame_1, text='Відмінити', font=(self.font_1, 12), bd=2, command=self.ClearScreen, cursor="hand2", bg=self.color_2,fg=self.color_3).place(x=430,y=389,width=100)
+
+    '''Функція оновлення редагованого контакту в базі даних'''
+    def UpdateRecord(self, row):
+        if self.name_entry.get() == "" or self.surname_entry.get() == "" or self.addr_entry.get() == "" or self.email_entry.get() == "":
+            messagebox.showerror("Помилка!","Пробачте, усі поля повинні бути заповнені",parent=self.window)
+        else:
+            try:
+                connection = pymysql.connect(host=self.host, user=self.user, password=self.password, database=self.database)
+                curs = connection.cursor()
+                curs.execute("select * from contact_register where contact=%s", row[3])
+                row=curs.fetchone()
+
+                if row==None:
+                    messagebox.showerror("Помилка!","Такого контакту не існує!",parent=self.window)
+                else:
+                    if vl.IsValidEmail(self.email_entry.get()):
+                        curs.execute("update contact_register set f_name=%s,l_name=%s, address=%s, email=%s where contact=%s",
+                                            (
+                                                self.name_entry.get(),
+                                                self.surname_entry.get(),
+                                                self.addr_entry.get(),
+                                                self.email_entry.get(),
+                                                row[3]
+                                            ))
+                        connection.commit()
+                        connection.close()
+                        messagebox.showinfo('Готово!', "Редагування виконано успішно!")
+                        self.ClearScreen()
+                    else:
+                        messagebox.showerror("Помилка!", "Перевірте, будь ласка, формат введення електронної адреси!")
+            except Exception as e:
+                messagebox.showerror("Помилка!",f"Причина помилки: {str(e)}",parent=self.window)
+
+    '''Функція видалення вибраного контакту'''
+    def DeleteData(self):
+        x = self.tree.selection()
+        y=self.tree.item(x)['values']
+        if y == "":
+            messagebox.showerror('Помилка!', "Виберіть, будь ласка, контакт!")
+        else:
+            try:
+                connection = pymysql.connect(host=self.host, user=self.user, password=self.password, database=self.database)
+                curs = connection.cursor()
+                curs.execute("select * from contact_register where contact=%s", y[3])
+                row=curs.fetchone()
+                
+                if row == None:
+                    messagebox.showerror("Error!","Contact number doesn't exists",parent=self.window)
+                else:
+                    var = messagebox.askokcancel('Видалили контакт?', 'Ви впевнені, що хочете видалити цей контакт?')
+                    if var == True:
+                        curs.execute("delete from contact_register where contact=%s", y[3])
+                        connection.commit()
+                        messagebox.showinfo('Готово!', "Дані успішно видалено!")
+                    connection.close()
+                    self.ClearScreen()
+                    self.DisplayRecords()
+            except Exception as e:
+                messagebox.showerror("Error!",f"Error due to {str(e)}",parent=self.window)
 
     '''Функція скидання введеної інформації в текстові поля після їх застосування'''
     def reset_fields(self):
