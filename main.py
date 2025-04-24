@@ -329,8 +329,9 @@ class Management:
 
     '''Функція виходу з ПЗ'''
     def Exit(self):
-        pass
-
+        self.window.destroy()
+        
+# Функція main для запуску ПЗ
 if __name__ == "__main__":
     root = Tk()
     obj = Management(root)
