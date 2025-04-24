@@ -6,6 +6,7 @@ import pymysql
 import custom as cs
 import credentials as cr
 import validemail as vl
+
 class Management:
     '''Функція ініціалізації нового вікна бібліотекою TKinter'''
     def __init__(self, root):
@@ -104,12 +105,69 @@ class Management:
             except Exception as e:
                 messagebox.showerror("Помилка!",f"Причина помилки: {str(e)}",parent=self.window)
 
+    '''Функція створення текстових полів вводу контактної інформації для пошуку контактів'''
+    def GetContact_to_Search(self):
+        self.ClearScreen()
+        getName = Label(self.frame_1, text="Ім'я", font=(self.font_2, 18, "bold"), bg=self.color_1).place(x=160,y=70)
+        self.name_entry = Entry(self.frame_1, font=(self.font_1, 12), bg=self.color_4, fg=self.color_3)
+        self.name_entry.place(x=160, y=110, width=200, height=30)
+
+        getSurname = Label(self.frame_1, text="Прізвище", font=(self.font_2, 18, "bold"), bg=self.color_1).place(x=420,y=70)
+        self.surname_entry = Entry(self.frame_1, font=(self.font_1, 12), bg=self.color_4, fg=self.color_3)
+        self.surname_entry.place(x=420, y=110, width=200, height=30)
+
+        submit_bt_2 = Button(self.frame_1, text='Знайти', font=(self.font_1, 14), bd=2, command=self.CheckContact_to_Search, cursor="hand2", bg=self.color_2,fg=self.color_3).place(x=340,y=180,width=100)
+
+    '''Функція перевірки правильності введення контактної інформації та наявності шуканого контакту'''
+    def CheckContact_to_Search(self):
+        if self.name_entry.get() == "" and self.surname_entry.get() == "":
+            messagebox.showerror("Помилка!", "Заповніть, будь ласка, поля Ім'я або Прізвище",parent=self.window)
+        else:
+            try:
+                connection = pymysql.connect(host=self.host, user=self.user, password=self.password, database=self.database)
+                curs = connection.cursor()
+                curs.execute("select * from contact_register where f_name=%s or l_name=%s", (self.name_entry.get(), self.surname_entry.get()))
+                rows=curs.fetchall()
+                if len(rows) == 0:
+                    messagebox.showerror("Помилка!","Введеного Вами контакту не існує!",parent=self.window)
+                    connection.close()
+                    self.name_entry.delete(0, END)
+                    self.surname_entry.delete(0, END)
+                else:
+                    self.ShowRecords(rows)
+                    connection.close()
+            except Exception as e:
+                messagebox.showerror("Помилка!",f"Причина помилки: {str(e)}",parent=self.window)
+
+    '''Функція виводу шуканих контактів'''
+    def ShowRecords(self, rows):
+        self.ClearScreen()
+        scroll_x = ttk.Scrollbar(self.frame_1, orient=HORIZONTAL)
+        scroll_y = ttk.Scrollbar(self.frame_1, orient=VERTICAL)
+        self.tree = ttk.Treeview(self.frame_1, columns=self.columns, height=400, selectmode="extended", yscrollcommand=scroll_y.set, xscrollcommand=scroll_x.set)
+        scroll_y.config(command=self.tree.yview)
+        scroll_y.pack(side=LEFT, fill=Y)
+        scroll_x.config(command=self.tree.xview)
+        scroll_x.pack(side=BOTTOM, fill=X)
+
+        # Стовпці таблиці бази даних
+        self.tree.heading('first_name', text="Ім'я", anchor=W)
+        self.tree.heading('last_name', text='Прізвище', anchor=W)
+        self.tree.heading('contact', text='Номер телефону', anchor=W)
+        self.tree.heading('address', text='Адрес', anchor=W)
+        self.tree.heading('email', text='Email', anchor=W)
+        self.tree.pack()
+        self.tree.bind('<Button-1>', self.Selected)
+        # Внесення даних до таблиць
+        for list in rows:
+            self.tree.insert("", 'end', text=(rows.index(list)+1), values=(list[0], list[1], list[2], list[3], list[4]))
+
     '''Функція створення таблиці на головному екрані та виведення в ній списку контактів із бази даних'''
     def DisplayRecords(self):
         pass
 
-    '''Функція вводу контактної інформації для пошуку контактів'''
-    def GetContact_to_Search(self):
+    '''Функція появи кнопок редагування та видалення контактів при виборі будь-якого контакту'''
+    def Selected(self, a):
         pass
 
     '''Функція скидання введеної інформації в текстові поля після їх застосування'''
@@ -122,7 +180,8 @@ class Management:
 
     '''Функція очищення екрану при натисканні кнопки Головний екран'''
     def ClearScreen(self):
-        pass
+        for widget in self.frame_1.winfo_children():
+            widget.destroy()
 
     '''Функція виходу з ПЗ'''
     def Exit(self):
