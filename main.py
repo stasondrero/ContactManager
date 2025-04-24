@@ -164,7 +164,44 @@ class Management:
 
     '''Функція створення таблиці на головному екрані та виведення в ній списку контактів із бази даних'''
     def DisplayRecords(self):
-        pass
+        self.ClearScreen()
+
+        scroll_x = ttk.Scrollbar(self.frame_1, orient=HORIZONTAL)
+        scroll_y = ttk.Scrollbar(self.frame_1, orient=VERTICAL)
+        self.tree = ttk.Treeview(self.frame_1, columns=self.columns, height=400, selectmode="extended", yscrollcommand=scroll_y.set, xscrollcommand=scroll_x.set)
+        scroll_y.config(command=self.tree.yview)
+
+        scroll_y.pack(side=LEFT, fill=Y)
+        scroll_x.config(command=self.tree.xview)
+
+        scroll_x.pack(side=BOTTOM, fill=X)
+
+        # Заголовки таблиці
+        self.tree.heading('first_name', text="Ім'я", anchor=W)
+        self.tree.heading('last_name', text='Прізвище', anchor=W)
+        self.tree.heading('contact', text='Номер телефону', anchor=W)
+        self.tree.heading('address', text='Адрес', anchor=W)
+        self.tree.heading('email', text='Email', anchor=W)
+        self.tree.pack()
+
+        self.tree.bind('<Button-1>', self.Selected)
+
+        try:
+            connection = pymysql.connect(host=self.host, user=self.user, password=self.password, database=self.database)
+            curs = connection.cursor()
+            curs.execute("select * from contact_register")
+            rows=curs.fetchall()
+            if rows == None:
+                messagebox.showinfo("База даних пуста!","Немає даних для виведення!",parent=self.window)
+                connection.close()
+                self.ClearScreen()
+            else:
+                connection.close()
+        except Exception as e:
+            messagebox.showerror("Помилка!",f"Причина помилки: {str(e)}",parent=self.window)
+        # Формування рядків
+        for list in rows:
+            self.tree.insert("", 'end', text=(rows.index(list)+1), values=(list[0], list[1], list[2], list[3], list[4]))
 
     '''Функція появи кнопок редагування та видалення контактів при виборі будь-якого контакту'''
     def Selected(self, a):
